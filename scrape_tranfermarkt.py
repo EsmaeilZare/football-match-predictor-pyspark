@@ -129,7 +129,6 @@ def main():
 
             except WebDriverException:
                 driver = None
-                tm_player_id -= 1
 
     except Exception as e:
         print("error ---> ", str(e))
