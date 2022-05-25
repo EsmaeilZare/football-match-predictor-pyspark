@@ -3,9 +3,8 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 
-from threading import Thread
-from queue import Queue
 import pandas as pd
 import os.path
 import winsound
@@ -66,23 +65,10 @@ def get_player_value_market_history(web_driver: webdriver, tab_number: int, base
             players.append(player)
 
 
-class RequestWorker(Thread):
-    def __init__(self, queue):
-        Thread.__init__(self)
-        self.queue = queue
-
-    def run(self):
-        while True:
-            # Get the work from the queue and expand the tuple
-            web_driver, tab_number, base_url, player_id, = self.queue.get()
-            try:
-                get_player_value_market_history(web_driver, tab_number, base_url, player_id)
-            finally:
-                self.queue.task_done()
-
-
 def initialize_web_driver():
     global base_url
+    chrome_options = Options()
+    chrome_options.add_experimental_option("detach", True)
 
     driver = webdriver.Chrome(ChromeDriverManager().install())
     driver.maximize_window()
