@@ -3,13 +3,10 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options
 
 import pandas as pd
-import os.path
 import winsound
 
-players = []
 base_url = "https://www.transfermarkt.com/kaka/marktwertverlauf/spieler/"
 
 
@@ -18,9 +15,9 @@ def write_csv(player_list):
     players_df.to_csv("tm_players.csv")
 
 
-def get_player_value_market_history(web_driver: webdriver, tab_number: int, base_url: str, player_id: int):
-    global players
-    player, market_history = None, []
+def get_player_value_market_history(web_driver: webdriver, tab_number: int, player_id: int):
+    global base_url
+    market_history = []
     try:
         web_driver.switch_to.window(f"{tab_number}")
         web_driver.get(f'{base_url}{player_id}')
@@ -43,32 +40,14 @@ def get_player_value_market_history(web_driver: webdriver, tab_number: int, base
                 )
             except WebDriverException:
                 raise
-
-        name = web_driver.find_element(by=By.XPATH, value="//h1[@class='data-header__headline-wrapper']")
-        birth_data = web_driver.find_element(by=By.CSS_SELECTOR, value="span[itemprop='birthDate']")
-        nationality = web_driver.find_element(by=By.CSS_SELECTOR, value="span[itemprop='nationality']")
-        height = web_driver.find_element(by=By.CSS_SELECTOR, value="span[itemprop='height']")
-        player = {
-            "id": player_id,
-            "name": name.text,
-            "birth_data": birth_data.text,
-            "nationality": nationality.text,
-            "height": height.text,
-            "market_history": market_history
-        }
-
-        print("------->", player)
     except NoSuchElementException:
         print(f"There is no market value history for player_id --> {player_id}")
     finally:
-        if player is not None:
-            players.append(player)
+        return market_history
 
 
 def initialize_web_driver():
     global base_url
-    chrome_options = Options()
-    chrome_options.add_experimental_option("detach", True)
 
     driver = webdriver.Chrome(ChromeDriverManager().install())
     driver.maximize_window()
@@ -91,27 +70,32 @@ def initialize_web_driver():
 
 
 def main():
-    global players
     global base_url
     driver = None
+    players = None
     try:
-        tm_player_id = 1
-        if os.path.exists('tm_players.csv'):
-            players_df = pd.read_csv("tm_players.csv")
-            players = players_df.to_dict('records')
-            tm_player_id = players[-1]["id"] + 1
-        players_count = int(input("How many players do you want to retrieve? \n"))
-        end_tm_player_id = tm_player_id + players_count
+        players = pd.read_csv("players.csv")
+        players_count = len(players)
+        players.insert(3, "value_history", [[] for _ in range(players_count)], True)
+        start_index = int(input("Where do you want to start? \n"))
+        end_index = int(input("Where do you want to finish? \n"))
+        if start_index > len(players):
+            print("Start index is out of range!!!!")
+            return
+        if end_index > len(players):
+            end_index = len(players)
 
-        while tm_player_id < end_tm_player_id:
+        while start_index < end_index:
             if driver is None:
                 driver = initialize_web_driver()
             try:
-                print(
-                    "requesting and getting information of player_id --> {}".format(tm_player_id)
-                )
-                get_player_value_market_history(driver, (tm_player_id % 8), base_url, tm_player_id)
-                tm_player_id += 1
+                tm_player_id = players.loc[start_index, "tm_player_id"]
+                if tm_player_id != 0:
+                    print(
+                        "requesting and getting information of player_id --> {}".format(tm_player_id)
+                    )
+                    get_player_value_market_history(driver, (tm_player_id % 8), tm_player_id)
+                start_index += 1
 
             except WebDriverException:
                 driver = None
@@ -119,7 +103,7 @@ def main():
     except Exception as e:
         print("error ---> ", str(e))
     finally:
-        write_csv(players)
+        players.to_csv("players_value_history.csv", index=False)
 
 
 if __name__ == "__main__":
