@@ -6,6 +6,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 import pandas as pd
 import winsound
+import os
 
 base_url = "https://www.transfermarkt.com/kaka/marktwertverlauf/spieler/"
 
@@ -84,9 +85,12 @@ def main():
     driver = None
     players = None
     try:
-        players = pd.read_csv("players.csv")
-        players_count = len(players)
-        players.insert(3, "value_history", [[] for _ in range(players_count)], True)
+        if os.path.exists("players_value_history.csv"):
+            players = pd.read_csv("players_value_history.csv")
+        else:
+            players = pd.read_csv("players.csv")
+            players.insert(3, "value_history", [[] for _ in range(len(players))], True)
+
         start_index = int(input("Where do you want to start? \n"))
         end_index = int(input("Where do you want to finish? \n"))
         if start_index > len(players):
@@ -100,18 +104,17 @@ def main():
                 driver = initialize_web_driver()
             try:
                 tm_player_id = players.loc[start_index, "tm_player_id"]
-                if tm_player_id != 0:
+                value_history = players.loc[start_index, "value_history"]
+                if tm_player_id > 0 and len(value_history) <= 2:
                     print(
-                        "requesting and getting information of player_id --> {}".format(
-                            tm_player_id
+                        "requesting and getting information of player_id --> {} at index: {}".format(
+                            tm_player_id, start_index+1
                         )
                     )
-                    players.loc[start_index, "value_history"] = str(
-                        get_player_value_market_history(
-                            driver, (start_index % 8), tm_player_id
-                        )
-                    )
-                if start_index % 20 == 0:
+                    players.loc[start_index, "value_history"] = str(get_player_value_market_history(driver, (start_index % 8), tm_player_id))
+
+                if start_index % 10 == 0:
+                    print(f"we have just saved a backup of progress till index ==> {start_index}")
                     players.to_csv("players_value_history.csv", index=False)
                 start_index += 1
 
