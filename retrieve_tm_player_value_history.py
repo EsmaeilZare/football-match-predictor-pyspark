@@ -111,6 +111,8 @@ def main():
                             driver, (start_index % 8), tm_player_id
                         )
                     )
+                if start_index % 20 == 0:
+                    players.to_csv("players_value_history.csv", index=False)
                 start_index += 1
 
             except WebDriverException:
