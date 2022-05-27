@@ -108,7 +108,7 @@ def main():
                     )
                     players.loc[start_index, "value_history"] = str(
                         get_player_value_market_history(
-                            driver, (tm_player_id % 8), tm_player_id
+                            driver, (start_index % 8), tm_player_id
                         )
                     )
                 start_index += 1
