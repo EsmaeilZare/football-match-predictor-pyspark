@@ -15,19 +15,27 @@ def write_csv(player_list):
     players_df.to_csv("tm_players.csv")
 
 
-def get_player_value_market_history(web_driver: webdriver, tab_number: int, player_id: int):
+def get_player_value_market_history(
+    web_driver: webdriver, tab_number: int, player_id: int
+):
     global base_url
     market_history = []
     try:
         web_driver.switch_to.window(f"{tab_number}")
-        web_driver.get(f'{base_url}{player_id}')
-        value_history_chart = web_driver.find_element(by=By.CLASS_NAME, value='highcharts-markers')
-        value_change_points = value_history_chart.find_elements(by=By.TAG_NAME, value="image")
+        web_driver.get(f"{base_url}{player_id}")
+        value_history_chart = web_driver.find_element(
+            by=By.CLASS_NAME, value="highcharts-markers"
+        )
+        value_change_points = value_history_chart.find_elements(
+            by=By.TAG_NAME, value="image"
+        )
         for value_change_point in value_change_points:
             try:
                 action = ActionChains(web_driver)
                 action.move_to_element(value_change_point).perform()
-                details = web_driver.find_elements(by=By.XPATH, value='//div[@class="highcharts-tooltip"]/span/b')
+                details = web_driver.find_elements(
+                    by=By.XPATH, value='//div[@class="highcharts-tooltip"]/span/b'
+                )
                 if len(details) != 4:
                     continue
                 market_history.append(
@@ -35,7 +43,7 @@ def get_player_value_market_history(web_driver: webdriver, tab_number: int, play
                         "date": details[0].text,
                         "value": details[1].text,
                         "club": details[2].text,
-                        "age": details[3].text
+                        "age": details[3].text,
                     }
                 )
             except WebDriverException:
@@ -58,7 +66,9 @@ def initialize_web_driver():
     duration = 1000  # Set Duration To 1000 ms == 1 second
     winsound.Beep(frequency, duration)
     while True:
-        accept_cookies = input("Please accept all cookies of transfermarkt.com on google chrome and the press y\n")
+        accept_cookies = input(
+            "Please accept all cookies of transfermarkt.com on google chrome and the press y\n"
+        )
         if accept_cookies.upper() == "Y":
             break
 
@@ -92,9 +102,15 @@ def main():
                 tm_player_id = players.loc[start_index, "tm_player_id"]
                 if tm_player_id != 0:
                     print(
-                        "requesting and getting information of player_id --> {}".format(tm_player_id)
+                        "requesting and getting information of player_id --> {}".format(
+                            tm_player_id
+                        )
                     )
-                    get_player_value_market_history(driver, (tm_player_id % 8), tm_player_id)
+                    players.loc[start_index, "value_history"] = str(
+                        get_player_value_market_history(
+                            driver, (tm_player_id % 8), tm_player_id
+                        )
+                    )
                 start_index += 1
 
             except WebDriverException:
